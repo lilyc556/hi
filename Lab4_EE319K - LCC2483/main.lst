@@ -1,0 +1,1056 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ;****************** main.s ***************
+    2 00000000         ; Program written by: Lily Chieng, Ashiqa Momin
+    3 00000000         ; Date Created: 2/14/2017
+    4 00000000         ; Last Modified: 3/1/2020
+    5 00000000         ; You are given a simple stepper motor software system w
+                       ith one input and
+    6 00000000         ; four outputs. This program runs, but you are asked to 
+                       add minimally intrusive
+    7 00000000         ; debugging instruments to verify it is running properly
+                       . 
+    8 00000000         ; The system outputs in one of three modes:
+    9 00000000         ; 1) cycles through 10,6,5,9,... at a constant rate
+   10 00000000         ; 2) cycles through 5,6,10,9,... at a constant rate
+   11 00000000         ; 3) does not change the output, but still outputs at a 
+                       constant rate
+   12 00000000         ; When PA4 goes high and low again, the system cycles th
+                       rough these modes
+   13 00000000         ; The output rate will be different on the simulator ver
+                       sus the real board
+   14 00000000         ;   Insert debugging instruments which gather data (stat
+                       e and timing)
+   15 00000000         ;   to verify that the system is functioning as expected
+                       .
+   16 00000000         ; Hardware connections (External: One button and four ou
+                       tputs to stepper motor)
+   17 00000000         ;  PA4 is Button input  (1 means pressed, 0 means not pr
+                       essed)
+   18 00000000         ;  PE3-0 are stepper motor outputs 
+   19 00000000         ;  PF2 is Blue LED on Launchpad used as a heartbeat
+   20 00000000         ; Instrumentation data to be gathered is as follows:
+   21 00000000         ; After every output to Port E, collect one state and ti
+                       me entry. 
+   22 00000000         ; The state information is the 5 bits on Port A bit 4 an
+                       d Port E PE3-0
+   23 00000000         ;   place one 8-bit entry in your Data Buffer  
+   24 00000000         ; The time information is the 24-bit time difference bet
+                       ween this output and the previous (in 12.5ns units)
+   25 00000000         ;   place one 32-bit entry in the Time Buffer
+   26 00000000         ;    24-bit value of the SysTick's Current register (NVI
+                       C_ST_CURRENT_R)
+   27 00000000         ;    you must handle the roll over as Current goes 3,2,1
+                       ,0,0x00FFFFFF,0xFFFFFE,
+   28 00000000         ; Note: The size of both buffers is 100 entries. Once yo
+                       u fill these
+   29 00000000         ;       entries you should stop collecting data
+   30 00000000         ; The heartbeat is an indicator of the running of the pr
+                       ogram. 
+   31 00000000         ; On each iteration of the main loop of your program tog
+                       gle the 
+   32 00000000         ; LED to indicate that your code(system) is live (not st
+                       uck or dead).
+   33 00000000         
+   34 00000000 400FE608 
+                       SYSCTL_RCGCGPIO_R
+                               EQU              0x400FE608
+   35 00000000 E000E018 
+                       NVIC_ST_CURRENT_R
+                               EQU              0xE000E018
+   36 00000000 400043FC 
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+                       GPIO_PORTA_DATA_R
+                               EQU              0x400043FC
+   37 00000000 40004400 
+                       GPIO_PORTA_DIR_R
+                               EQU              0x40004400
+   38 00000000 4000451C 
+                       GPIO_PORTA_DEN_R
+                               EQU              0x4000451C
+   39 00000000 400243FC 
+                       GPIO_PORTE_DATA_R
+                               EQU              0x400243FC
+   40 00000000 40024400 
+                       GPIO_PORTE_DIR_R
+                               EQU              0x40024400
+   41 00000000 4002451C 
+                       GPIO_PORTE_DEN_R
+                               EQU              0x4002451C
+   42 00000000 400253FC 
+                       GPIO_PORTF_DATA_R
+                               EQU              0x400253FC
+   43 00000000 40025400 
+                       GPIO_PORTF_DIR_R
+                               EQU              0x40025400
+   44 00000000 4002551C 
+                       GPIO_PORTF_DEN_R
+                               EQU              0x4002551C
+   45 00000000         ; RAM Area
+   46 00000000                 PRESERVE8
+   47 00000000                 AREA             DATA, ALIGN=2
+   48 00000000 00 00 00 
+              00       Index   SPACE            4           ; index into Steppe
+                                                            r table 0,1,2,3
+   49 00000004 00 00 00 
+              00       Direction
+                               SPACE            4           ; -1 for CCW, 0 for
+                                                             stop 1 for CW
+   50 00000008         
+   51 00000008         
+   52 00000008         ;place your debug variables in RAM here
+   53 00000008 00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00       DataBuffer
+                               SPACE            100
+   54 0000006C 00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00       TimeBuffer
+                               SPACE            400
+   55 000001FC 00 00 00 
+              00       DataPt  SPACE            4
+   56 00000200 00 00 00 
+              00       TimePt  SPACE            4
+   57 00000204 00 00 00 
+              00       Last    SPACE            4
+   58 00000208         ; ROM Area
+   59 00000208                 IMPORT           TExaS_Init
+   60 00000208                 IMPORT           SysTick_Init
+   61 00000208         ;-UUU-Import routine(s) from other assembly files (like 
+                       SysTick.s) here
+   62 00000208                 AREA             |.text|, CODE, READONLY, ALIGN=
+2
+   63 00000000                 THUMB
+   64 00000000 05 06 0A 
+              09       Stepper DCB              5,6,10,9
+   65 00000004                 EXPORT           Start
+   66 00000004         
+   67 00000004         Start
+   68 00000004         ; TExaS_Init sets bus clock at 80 MHz
+   69 00000004         ; PA4, PE3-PE0 out logic analyzer to TExasDisplay
+   70 00000004 486A            LDR              R0,=SendDataToLogicAnalyzer
+   71 00000006 F040 0001       ORR              R0,R0,#1
+   72 0000000A F7FF FFFE       BL               TExaS_Init  ; logic analyzer, 8
+                                                            0 MHz
+   73 0000000E         ;place your initializations here
+   74 0000000E 4869            LDR              R0,=SYSCTL_RCGCGPIO_R
+
+
+
+ARM Macro Assembler    Page 6 
+
+
+   75 00000010 6801            LDR              R1,[R0]
+   76 00000012 F041 0120       ORR              R1,R1,#0x20
+   77 00000016 6001            STR              R1,[R0]
+   78 00000018 BF00            NOP
+   79 0000001A BF00            NOP
+   80 0000001C         
+   81 0000001C         ;   LDR R0,=GPIO_PORTF_LOCK_R
+   82 0000001C         ;   LDR R1,=0x4C4F434B
+   83 0000001C         ;   STR R1,[R0]
+   84 0000001C         
+   85 0000001C         ;   LDR R0,=GPIO_PORTF_CR_R
+   86 0000001C         ;   LDR R1,=0x04
+   87 0000001C         ;   STR R1,[R0]
+   88 0000001C         
+   89 0000001C 4866            LDR              R0,=GPIO_PORTF_DIR_R
+   90 0000001E 6801            LDR              R1,[R0]
+   91 00000020 F041 0104       ORR              R1,R1,#0x04
+   92 00000024 6001            STR              R1,[R0]
+   93 00000026         
+   94 00000026 4865            LDR              R0,=GPIO_PORTF_DEN_R
+   95 00000028 6801            LDR              R1,[R0]
+   96 0000002A F041 0104       ORR              R1,R1,#0x04
+   97 0000002E 6001            STR              R1,[R0]
+   98 00000030         
+   99 00000030 F000 F81F       BL               Stepper_Init ; initialize stepp
+                                                            er motor
+  100 00000034 F000 F837       BL               Switch_Init ; initialize switch
+                                                             input
+  101 00000038         ;**********************
+  102 00000038 F000 F85A       BL               Debug_Init  ;initialize debugge
+                                                            r
+  103 0000003C         ;**********************
+  104 0000003C B662            CPSIE            I           ; TExaS logic analy
+                                                            zer runs on interru
+                                                            pts
+  105 0000003E F04F 0500       MOV              R5,#0       ; last PA4
+  106 00000042         loop
+  107 00000042         
+  108 00000042 495F            LDR              R1,=GPIO_PORTA_DATA_R
+  109 00000044 680C            LDR              R4,[R1]     ;current value of s
+                                                            witch
+  110 00000046 F004 0410       AND              R4,R4,#0x10 ; select just bit 4
+                                                            
+  111 0000004A 2C00            CMP              R4,#0
+  112 0000004C D00A            BEQ              no          ; skip if not pushe
+                                                            d
+  113 0000004E 2D00            CMP              R5,#0
+  114 00000050 D108            BNE              no          ; skip if pushed la
+                                                            st time
+  115 00000052         ; this time yes, last time no
+  116 00000052 495C            LDR              R1,=Direction
+  117 00000054 6808            LDR              R0,[R1]     ; current direction
+                                                            
+  118 00000056 F100 0001       ADD              R0,R0,#1    ;-1,0,1 to 0,1,2
+  119 0000005A 2802            CMP              R0,#2
+  120 0000005C D101            BNE              ok
+  121 0000005E F04F 30FF       MOV              R0,#-1      ; cycles through va
+                                                            lues -1,0,1
+  122 00000062 6008    ok      STR              R0,[R1]     ; Direction=0 (CW) 
+
+
+
+ARM Macro Assembler    Page 7 
+
+
+                                                             
+  123 00000064 4625    no      MOV              R5,R4       ; setup for next ti
+                                                            me
+  124 00000066 F000 F830       BL               Stepper_Step
+  125 0000006A 4857            LDR              R0,=1600000
+  126 0000006C F000 F83D       BL               Wait        ; time delay fixed 
+                                                            but not accurate   
+                                                            
+  127 00000070 E7E7            B                loop
+  128 00000072         ;Initialize stepper motor interface
+  129 00000072         Stepper_Init
+  130 00000072 F04F 0001       MOV              R0,#1
+  131 00000076 4953            LDR              R1,=Direction
+  132 00000078 6008            STR              R0,[R1]     ; Direction=0 (CW)
+  133 0000007A F04F 0000       MOV              R0,#0
+  134 0000007E 4953            LDR              R1,=Index
+  135 00000080 6008            STR              R0,[R1]     ; Index=0
+  136 00000082         ; activate clock for Port E
+  137 00000082 494C            LDR              R1, =SYSCTL_RCGCGPIO_R
+  138 00000084 6808            LDR              R0, [R1]
+  139 00000086 F040 0010       ORR              R0, R0, #0x10 ; Clock for E
+  140 0000008A 6008            STR              R0, [R1]
+  141 0000008C BF00            NOP
+  142 0000008E BF00            NOP                          ; allow time to fin
+                                                            ish activating
+  143 00000090         ; set direction register
+  144 00000090 494F            LDR              R1, =GPIO_PORTE_DIR_R
+  145 00000092 6808            LDR              R0, [R1]
+  146 00000094 F040 000F       ORR              R0, R0, #0x0F 
+                                                            ; Output on PE0-PE3
+                                                            
+  147 00000098 6008            STR              R0, [R1]
+  148 0000009A         ; enable digital port
+  149 0000009A 494E            LDR              R1, =GPIO_PORTE_DEN_R
+  150 0000009C 6808            LDR              R0, [R1]
+  151 0000009E F040 000F       ORR              R0, R0, #0x0F ; enable PE3-0
+  152 000000A2 6008            STR              R0, [R1]
+  153 000000A4 4770            BX               LR
+  154 000000A6         
+  155 000000A6         ;Initialize switch interface
+  156 000000A6         Switch_Init
+  157 000000A6         ; activate clock for Port A
+  158 000000A6 4943            LDR              R1, =SYSCTL_RCGCGPIO_R
+  159 000000A8 6808            LDR              R0, [R1]
+  160 000000AA F040 0001       ORR              R0, R0, #0x01 ; Clock for A
+  161 000000AE 6008            STR              R0, [R1]
+  162 000000B0 BF00            NOP
+  163 000000B2 BF00            NOP                          ; allow time to fin
+                                                            ish activating
+  164 000000B4         ; set direction register
+  165 000000B4 4948            LDR              R1, =GPIO_PORTA_DIR_R
+  166 000000B6 6808            LDR              R0, [R1]
+  167 000000B8 F020 0010       BIC              R0, R0, #0x10 ; Input on PA4
+  168 000000BC 6008            STR              R0, [R1]
+  169 000000BE         ; 5) enable digital port
+  170 000000BE 4947            LDR              R1, =GPIO_PORTA_DEN_R
+  171 000000C0 6808            LDR              R0, [R1]
+  172 000000C2 F040 0010       ORR              R0, R0, #0x10 ; enable PA4
+  173 000000C6 6008            STR              R0, [R1]
+
+
+
+ARM Macro Assembler    Page 8 
+
+
+  174 000000C8 4770            BX               LR
+  175 000000CA         ; Step the motor clockwise
+  176 000000CA         ; Direction determines the rotational direction
+  177 000000CA         ; Input: None
+  178 000000CA         ; Output: None
+  179 000000CA         Stepper_Step
+  180 000000CA B510            PUSH             {R4,LR}
+  181 000000CC 493F            LDR              R1,=Index
+  182 000000CE 680A            LDR              R2,[R1]     ; old Index
+  183 000000D0 4B3C            LDR              R3,=Direction
+  184 000000D2 6818            LDR              R0,[R3]     ; -1 for CCW, 0 for
+                                                             stop 1 for CW
+  185 000000D4 4402            ADD              R2,R2,R0
+  186 000000D6 F002 0203       AND              R2,R2,#3    ; 0,1,2,3,0,1,2,...
+                                                            
+  187 000000DA 600A            STR              R2,[R1]     ; new Index
+  188 000000DC 4B40            LDR              R3,=Stepper ; table
+  189 000000DE 5CD0            LDRB             R0,[R2,R3]  ; next output: 5,6,
+                                                            10,9,5,6,10,...
+  190 000000E0 4940            LDR              R1,=GPIO_PORTE_DATA_R 
+                                                            ; change PE3-PE0
+  191 000000E2 6008            STR              R0,[R1]
+  192 000000E4 F000 F820       BL               Debug_Capture
+  193 000000E8 BD10            POP              {R4,PC}
+  194 000000EA         ; inaccurate and inefficient time delay
+  195 000000EA         Wait
+  196 000000EA 1E40            SUBS             R0,R0,#1    ; outer loop
+  197 000000EC D1FD            BNE              Wait
+  198 000000EE 4770            BX               LR
+  199 000000F0         
+  200 000000F0         Debug_Init
+  201 000000F0 B51F            PUSH             {R0-R4,LR}
+  202 000000F2 F04F 02FF       MOV              R2, #0xFF
+  203 000000F6 F04F 0364       MOV              R3, #100
+  204 000000FA 483B            LDR              R0,=DataBuffer
+  205 000000FC 493B            LDR              R1, =DataPt
+  206 000000FE 6008            STR              R0,[R1]
+  207 00000100         
+  208 00000100 7002    dLoop   STRB             R2,[R0]
+  209 00000102 F100 0001       ADD              R0,#1
+  210 00000106 3B01            SUBS             R3,#1
+  211 00000108 D1FA            BNE              dLoop
+  212 0000010A         
+  213 0000010A F04F 32FF       LDR              R2, =0xFFFFFFFF
+  214 0000010E F04F 0364       MOV              R3, #100
+  215 00000112 4837            LDR              R0,=TimeBuffer
+  216 00000114 4937            LDR              R1, =TimePt
+  217 00000116 6008            STR              R0,[R1]
+  218 00000118 6002    tLoop   STR              R2,[R0]
+  219 0000011A F100 0004       ADD              R0,#4
+  220 0000011E 3B01            SUBS             R3,#1
+  221 00000120 D1FA            BNE              tLoop
+  222 00000122         
+  223 00000122 F7FF FFFE       BL               SysTick_Init
+  224 00000126 BD1F            POP              {R0-R4,PC}
+  225 00000128         
+  226 00000128         Debug_Capture
+  227 00000128         ;Estimate Intrusiveness
+  228 00000128         ;39 Instructions
+
+
+
+ARM Macro Assembler    Page 9 
+
+
+  229 00000128         ;12.5 ns * (39 instructions * 2cc) = 975 ns  Time to exe
+                       cute Debug_Capture instrument
+  230 00000128         ;6400149cc x 12.5ns = 80001862.5 ns    Time between Debu
+                       g_Capture
+  231 00000128         ;975 / 80001862.5 = 0.0012%
+  232 00000128 E92D 43FF       PUSH             {R0-R9,LR}
+  233 0000012C F000 F82D       BL               Heart
+  234 00000130         
+  235 00000130 482D            LDR              R0, =DataBuffer ;R0=DataBuffer 
+                                                            Address
+  236 00000132 F8DF 90BC       LDR              R9, =TimeBuffer ;R9=TimeBuffer 
+                                                            Address
+  237 00000136 F890 1063       LDRB             R1, [R0,#99]
+  238 0000013A 29FF            CMP              R1, #0xFF
+  239 0000013C D123            BNE              Full
+  240 0000013E         ;MOV R7, #0      ;R7= last
+  241 0000013E         
+  242 0000013E F06F 487F       LDR              R8, =0x00FFFFFF ;R8=24bits
+  243 00000142 4A1F            LDR              R2,=GPIO_PORTA_DATA_R
+  244 00000144 6813            LDR              R3, [R2]
+  245 00000146 F003 0310       AND              R3,R3,#0x10 ;PA4
+  246 0000014A         
+  247 0000014A 4A26            LDR              R2,=GPIO_PORTE_DATA_R
+  248 0000014C 6814            LDR              R4,[R2]
+  249 0000014E F004 040F       AND              R4,R4,#0x0F ;PE0-3
+  250 00000152         
+  251 00000152 EB03 0504       ADD              R5, R3, R4  ;PA4, PE0-3 ;R5 = D
+                                                            ata goes into DataB
+                                                            uffer
+  252 00000156 4E25            LDR              R6, =DataPt ;R6 = DataPt pointe
+                                                            r
+  253 00000158 6832            LDR              R2,[R6]
+  254 0000015A 7015            STRB             R5,[R2]     ;stuff goes into da
+                                                            ta buffer
+  255 0000015C F102 0201       ADD              R2, #1
+  256 00000160 6032            STR              R2,[R6]
+  257 00000162         
+  258 00000162 4A25            LDR              R2,=NVIC_ST_CURRENT_R
+  259 00000164 6813            LDR              R3,[R2]
+  260 00000166 4F25            LDR              R7,=Last
+  261 00000168 6839            LDR              R1,[R7]
+  262 0000016A         
+  263 0000016A EBA1 0403       SUB              R4, R1,R3
+  264 0000016E EA04 0408       AND              R4, R4,R8
+  265 00000172 603B            STR              R3,[R7]
+  266 00000174 F8DF 907C       LDR              R9, =TimePt ;R9 = TimePt
+  267 00000178 F8D9 2000       LDR              R2,[R9]
+  268 0000017C 6014            STR              R4,[R2]
+  269 0000017E F102 0204       ADD              R2, #4
+  270 00000182 F8C9 2000       STR              R2,[R9]
+  271 00000186         Full
+  272 00000186 E8BD 83FF       POP              {R0-R9,PC}
+  273 0000018A         
+  274 0000018A B503    Heart   PUSH{R0,R1,LR}
+  275 0000018C 481C            LDR              R0,=GPIO_PORTF_DATA_R
+  276 0000018E 6801            LDR              R1,[R0]
+  277 00000190 F081 0104       EOR              R1, #0x04   ;PF2 ON
+  278 00000194 6001            STR              R1,[R0]
+  279 00000196 BD03            POP{R0,R1,PC}
+
+
+
+ARM Macro Assembler    Page 10 
+
+
+  280 00000198         
+  281 00000198         
+  282 00000198         
+  283 00000198         ; edit the following only if you need to move pins from 
+                       PA4, PE3-0      
+  284 00000198         ; logic analyzer on the real board
+  285 00000198 40004040 
+                       PA4     equ              0x40004040  ; bit-specific addr
+                                                            essing
+  286 00000198 4002403C 
+                       PE30    equ              0x4002403C  ; bit-specific addr
+                                                            essing
+  287 00000198 4000C000 
+                       UART0_DR_R
+                               equ              0x4000C000  ;write to this to s
+                                                            end data
+  288 00000198         SendDataToLogicAnalyzer
+  289 00000198 491A            LDR              R1,=PA4
+  290 0000019A 6809            LDR              R1,[R1]     ; read PA4
+  291 0000019C 481A            LDR              R0,=PE30    ; read PE3-PE0
+  292 0000019E 6800            LDR              R0,[R0]
+  293 000001A0 EA40 0001       ORR              R0,R0,R1    ;combine into one 5
+                                                            -bit value
+  294 000001A4 F040 0080       ORR              R0,R0,#0x80 ;bit7=1 means digit
+                                                            al data
+  295 000001A8 4918            LDR              R1,=UART0_DR_R
+  296 000001AA 6008            STR              R0,[R1]     ; send data at 10 k
+                                                            Hz
+  297 000001AC 4770            BX               LR
+  298 000001AE         
+  299 000001AE         
+  300 000001AE 00 00           ALIGN                        ; make sure the end
+                                                             of this section is
+                                                             aligned
+  301 000001B0                 END                          ; end of file
+              00000000 
+              400FE608 
+              40025400 
+              4002551C 
+              400043FC 
+              00000000 
+              00186A00 
+              00000000 
+              40024400 
+              4002451C 
+              40004400 
+              4000451C 
+              00000000 
+              400243FC 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              E000E018 
+              00000000 
+              400253FC 
+              40004040 
+              4002403C 
+              4000C000 
+
+
+
+ARM Macro Assembler    Page 11 
+
+
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4 --apcs=interw
+ork --depend=.\main.d -o.\main.o -I.\RTE\_Lab4 -IC:\Users\Lily\AppData\Local\Ar
+m\Packs\ARM\CMSIS\5.6.0\CMSIS\Core\Include -IC:\Users\Lily\AppData\Local\Arm\Pa
+cks\Keil\TM4C_DFP\1.1.0\Device\Include\TM4C123 --predefine="__EVAL SETA 1" --pr
+edefine="__UVISION_VERSION SETA 529" --predefine="_RTE_ SETA 1" --predefine="TM
+4C123GH6PM SETA 1" --list=.\main.lst main.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+DATA 00000000
+
+Symbol: DATA
+   Definitions
+      At line 47 in file main.s
+   Uses
+      None
+Comment: DATA unused
+DataBuffer 00000008
+
+Symbol: DataBuffer
+   Definitions
+      At line 53 in file main.s
+   Uses
+      At line 204 in file main.s
+      At line 235 in file main.s
+
+DataPt 000001FC
+
+Symbol: DataPt
+   Definitions
+      At line 55 in file main.s
+   Uses
+      At line 205 in file main.s
+      At line 252 in file main.s
+
+Direction 00000004
+
+Symbol: Direction
+   Definitions
+      At line 49 in file main.s
+   Uses
+      At line 116 in file main.s
+      At line 131 in file main.s
+      At line 183 in file main.s
+
+Index 00000000
+
+Symbol: Index
+   Definitions
+      At line 48 in file main.s
+   Uses
+      At line 134 in file main.s
+      At line 181 in file main.s
+
+Last 00000204
+
+Symbol: Last
+   Definitions
+      At line 57 in file main.s
+   Uses
+      At line 260 in file main.s
+Comment: Last used once
+TimeBuffer 0000006C
+
+Symbol: TimeBuffer
+   Definitions
+      At line 54 in file main.s
+   Uses
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+      At line 215 in file main.s
+      At line 236 in file main.s
+
+TimePt 00000200
+
+Symbol: TimePt
+   Definitions
+      At line 56 in file main.s
+   Uses
+      At line 216 in file main.s
+      At line 266 in file main.s
+
+8 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+.text 00000000
+
+Symbol: .text
+   Definitions
+      At line 62 in file main.s
+   Uses
+      None
+Comment: .text unused
+Debug_Capture 00000128
+
+Symbol: Debug_Capture
+   Definitions
+      At line 226 in file main.s
+   Uses
+      At line 192 in file main.s
+Comment: Debug_Capture used once
+Debug_Init 000000F0
+
+Symbol: Debug_Init
+   Definitions
+      At line 200 in file main.s
+   Uses
+      At line 102 in file main.s
+Comment: Debug_Init used once
+Full 00000186
+
+Symbol: Full
+   Definitions
+      At line 271 in file main.s
+   Uses
+      At line 239 in file main.s
+Comment: Full used once
+Heart 0000018A
+
+Symbol: Heart
+   Definitions
+      At line 274 in file main.s
+   Uses
+      At line 233 in file main.s
+Comment: Heart used once
+SendDataToLogicAnalyzer 00000198
+
+Symbol: SendDataToLogicAnalyzer
+   Definitions
+      At line 288 in file main.s
+   Uses
+      At line 70 in file main.s
+Comment: SendDataToLogicAnalyzer used once
+Start 00000004
+
+Symbol: Start
+   Definitions
+      At line 67 in file main.s
+   Uses
+      At line 65 in file main.s
+Comment: Start used once
+Stepper 00000000
+
+Symbol: Stepper
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+   Definitions
+      At line 64 in file main.s
+   Uses
+      At line 188 in file main.s
+Comment: Stepper used once
+Stepper_Init 00000072
+
+Symbol: Stepper_Init
+   Definitions
+      At line 129 in file main.s
+   Uses
+      At line 99 in file main.s
+Comment: Stepper_Init used once
+Stepper_Step 000000CA
+
+Symbol: Stepper_Step
+   Definitions
+      At line 179 in file main.s
+   Uses
+      At line 124 in file main.s
+Comment: Stepper_Step used once
+Switch_Init 000000A6
+
+Symbol: Switch_Init
+   Definitions
+      At line 156 in file main.s
+   Uses
+      At line 100 in file main.s
+Comment: Switch_Init used once
+Wait 000000EA
+
+Symbol: Wait
+   Definitions
+      At line 195 in file main.s
+   Uses
+      At line 126 in file main.s
+      At line 197 in file main.s
+
+dLoop 00000100
+
+Symbol: dLoop
+   Definitions
+      At line 208 in file main.s
+   Uses
+      At line 211 in file main.s
+Comment: dLoop used once
+loop 00000042
+
+Symbol: loop
+   Definitions
+      At line 106 in file main.s
+   Uses
+      At line 127 in file main.s
+Comment: loop used once
+no 00000064
+
+Symbol: no
+   Definitions
+      At line 123 in file main.s
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Relocatable symbols
+
+   Uses
+      At line 112 in file main.s
+      At line 114 in file main.s
+
+ok 00000062
+
+Symbol: ok
+   Definitions
+      At line 122 in file main.s
+   Uses
+      At line 120 in file main.s
+Comment: ok used once
+tLoop 00000118
+
+Symbol: tLoop
+   Definitions
+      At line 218 in file main.s
+   Uses
+      At line 221 in file main.s
+Comment: tLoop used once
+17 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+GPIO_PORTA_DATA_R 400043FC
+
+Symbol: GPIO_PORTA_DATA_R
+   Definitions
+      At line 36 in file main.s
+   Uses
+      At line 108 in file main.s
+      At line 243 in file main.s
+
+GPIO_PORTA_DEN_R 4000451C
+
+Symbol: GPIO_PORTA_DEN_R
+   Definitions
+      At line 38 in file main.s
+   Uses
+      At line 170 in file main.s
+Comment: GPIO_PORTA_DEN_R used once
+GPIO_PORTA_DIR_R 40004400
+
+Symbol: GPIO_PORTA_DIR_R
+   Definitions
+      At line 37 in file main.s
+   Uses
+      At line 165 in file main.s
+Comment: GPIO_PORTA_DIR_R used once
+GPIO_PORTE_DATA_R 400243FC
+
+Symbol: GPIO_PORTE_DATA_R
+   Definitions
+      At line 39 in file main.s
+   Uses
+      At line 190 in file main.s
+      At line 247 in file main.s
+
+GPIO_PORTE_DEN_R 4002451C
+
+Symbol: GPIO_PORTE_DEN_R
+   Definitions
+      At line 41 in file main.s
+   Uses
+      At line 149 in file main.s
+Comment: GPIO_PORTE_DEN_R used once
+GPIO_PORTE_DIR_R 40024400
+
+Symbol: GPIO_PORTE_DIR_R
+   Definitions
+      At line 40 in file main.s
+   Uses
+      At line 144 in file main.s
+Comment: GPIO_PORTE_DIR_R used once
+GPIO_PORTF_DATA_R 400253FC
+
+Symbol: GPIO_PORTF_DATA_R
+   Definitions
+      At line 42 in file main.s
+   Uses
+      At line 275 in file main.s
+Comment: GPIO_PORTF_DATA_R used once
+GPIO_PORTF_DEN_R 4002551C
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Absolute symbols
+
+
+Symbol: GPIO_PORTF_DEN_R
+   Definitions
+      At line 44 in file main.s
+   Uses
+      At line 94 in file main.s
+Comment: GPIO_PORTF_DEN_R used once
+GPIO_PORTF_DIR_R 40025400
+
+Symbol: GPIO_PORTF_DIR_R
+   Definitions
+      At line 43 in file main.s
+   Uses
+      At line 89 in file main.s
+Comment: GPIO_PORTF_DIR_R used once
+NVIC_ST_CURRENT_R E000E018
+
+Symbol: NVIC_ST_CURRENT_R
+   Definitions
+      At line 35 in file main.s
+   Uses
+      At line 258 in file main.s
+Comment: NVIC_ST_CURRENT_R used once
+PA4 40004040
+
+Symbol: PA4
+   Definitions
+      At line 285 in file main.s
+   Uses
+      At line 289 in file main.s
+Comment: PA4 used once
+PE30 4002403C
+
+Symbol: PE30
+   Definitions
+      At line 286 in file main.s
+   Uses
+      At line 291 in file main.s
+Comment: PE30 used once
+SYSCTL_RCGCGPIO_R 400FE608
+
+Symbol: SYSCTL_RCGCGPIO_R
+   Definitions
+      At line 34 in file main.s
+   Uses
+      At line 74 in file main.s
+      At line 137 in file main.s
+      At line 158 in file main.s
+
+UART0_DR_R 4000C000
+
+Symbol: UART0_DR_R
+   Definitions
+      At line 287 in file main.s
+   Uses
+      At line 295 in file main.s
+Comment: UART0_DR_R used once
+14 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+External symbols
+
+SysTick_Init 00000000
+
+Symbol: SysTick_Init
+   Definitions
+      At line 60 in file main.s
+   Uses
+      At line 223 in file main.s
+Comment: SysTick_Init used once
+TExaS_Init 00000000
+
+Symbol: TExaS_Init
+   Definitions
+      At line 59 in file main.s
+   Uses
+      At line 72 in file main.s
+Comment: TExaS_Init used once
+2 symbols
+377 symbols in table
